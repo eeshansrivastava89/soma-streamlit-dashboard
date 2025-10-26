@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import altair as alt
 from sqlalchemy import create_engine
 from datetime import datetime
 import time
@@ -164,29 +165,46 @@ try:
         st.subheader("⏱️ Completion Time Distribution")
 
         if not completions.empty:
-            fig_dist = px.histogram(
-                completions,
-                x="completion_time_seconds",
-                color="variant",
-                nbins=20,
-                barmode="overlay",
-                opacity=0.7,
-                labels={
-                    "completion_time_seconds": "Completion Time (seconds)",
-                    "count": "Count",
-                    "variant": "Variant"
-                },
-                color_discrete_map={
-                    "A": "#636EFA",
-                    "B": "#EF553B"
-                }
-            )
-            fig_dist.update_layout(
-                height=400,
-                hovermode="x unified",
-                showlegend=True
-            )
-            st.plotly_chart(fig_dist, use_container_width=True)
+            # Create KDE (Kernel Density Estimation) curves using Altair
+            # Filter out any null values
+            completions_clean = completions.dropna(subset=['completion_time_seconds'])
+            
+            if not completions_clean.empty:
+                # Create smooth density curves for each variant
+                kde_chart = alt.Chart(completions_clean).transform_density(
+                    'completion_time_seconds',
+                    as_=['completion_time_seconds', 'density'],
+                    groupby=['variant'],
+                    bandwidth=0.5  # Adjust smoothness (lower = more detailed, higher = smoother)
+                ).mark_line(
+                    size=3,
+                    opacity=0.8
+                ).encode(
+                    x=alt.X('completion_time_seconds:Q', title='Completion Time (seconds)'),
+                    y=alt.Y('density:Q', title='Probability Density'),
+                    color=alt.Color(
+                        'variant:N',
+                        scale=alt.Scale(
+                            domain=['A', 'B'],
+                            range=['#636EFA', '#EF553B']
+                        ),
+                        legend=alt.Legend(title='Variant')
+                    ),
+                    tooltip=[
+                        alt.Tooltip('completion_time_seconds:Q', format='.2f', title='Time (s)'),
+                        alt.Tooltip('density:Q', format='.4f', title='Density'),
+                        alt.Tooltip('variant:N', title='Variant')
+                    ]
+                ).properties(
+                    height=400,
+                    width=600
+                ).interactive()
+                
+                st.altair_chart(kde_chart, use_container_width=True)
+                
+                st.caption("💡 **Hover over the curves** to see exact time and probability values. Smooth curves show how likely each completion time is for each variant.")
+            else:
+                st.info("No valid completion time data yet")
         else:
             st.info("No completion data yet")
 
