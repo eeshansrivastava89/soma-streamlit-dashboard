@@ -229,7 +229,6 @@ try:
             x="timestamp",
             y="completion_time_seconds",
             color="variant",
-            trendline="lowess",
             labels={
                 "timestamp": "Time",
                 "completion_time_seconds": "Completion Time (seconds)",
@@ -246,7 +245,7 @@ try:
         )
         st.plotly_chart(fig_time, use_container_width=True)
 
-        st.caption("💡 Are users getting faster over time? The trendline shows learning effects.")
+        st.caption("💡 Are users getting faster over time? Watch for patterns in completion times.")
     else:
         st.info("Need more data points for time series analysis")
 
