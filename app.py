@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import altair as alt
 from sqlalchemy import create_engine
 from datetime import datetime
@@ -46,9 +45,9 @@ def load_variant_stats():
 
 @st.cache_data(ttl=10)
 def load_conversion_funnel():
-    """Load conversion funnel from v_conversion_funnel view"""
+    """Load event-based conversion funnel from v_conversion_funnel view"""
     engine = get_db_connection()
-    query = "SELECT * FROM v_conversion_funnel ORDER BY variant"
+    query = "SELECT * FROM v_conversion_funnel ORDER BY variant, stage_order"
     df = pd.read_sql(query, engine)
     return df
 
@@ -209,32 +208,81 @@ try:
             st.info("No completion data yet")
 
     with chart_col2:
-        st.subheader("🎯 Conversion Funnel")
+        st.subheader("🎯 Event-Based Conversion Funnel")
 
         if not funnel_data.empty:
-            # Create funnel chart
-            fig_funnel = go.Figure()
-
-            for idx, row in funnel_data.iterrows():
-                variant_name = row['variant']
-                display_name = "Control (3 words)" if variant_name == "A" else "Variant (4 words)"
-                color = "#636EFA" if variant_name == "A" else "#EF553B"
-
-                fig_funnel.add_trace(go.Funnel(
-                    name=display_name,
-                    y=["Started", "Completed"],
-                    x=[row['started_users'], row['completed_users']],
-                    textinfo="value+percent initial",
-                    marker={"color": color},
-                    connector={"line": {"color": color}}
-                ))
-
-            fig_funnel.update_layout(
+            # Prepare data for Altair funnel visualization
+            funnel_data['variant_display'] = funnel_data['variant'].map({
+                'A': 'Control (3 words)',
+                'B': 'Variant (4 words)'
+            })
+            
+            # Create Altair bar chart for event-based funnel
+            funnel_chart = alt.Chart(funnel_data).mark_bar().encode(
+                x=alt.X(
+                    'stage:N',
+                    sort=['Started', 'Completed', 'Repeated'],
+                    title='Funnel Stage',
+                    axis=alt.Axis(labelAngle=0)
+                ),
+                y=alt.Y('event_count:Q', title='Number of Events'),
+                color=alt.Color(
+                    'variant:N',
+                    scale=alt.Scale(
+                        domain=['A', 'B'],
+                        range=['#636EFA', '#EF553B']
+                    ),
+                    legend=alt.Legend(title='Variant')
+                ),
+                xOffset='variant:N',
+                tooltip=[
+                    alt.Tooltip('stage:N', title='Stage'),
+                    alt.Tooltip('variant_display:N', title='Variant'),
+                    alt.Tooltip('event_count:Q', title='Events'),
+                    alt.Tooltip('unique_users:Q', title='Unique Users')
+                ]
+            ).properties(
                 height=400,
-                showlegend=True,
-                hovermode="y"
-            )
-            st.plotly_chart(fig_funnel, use_container_width=True)
+                width=600
+            ).interactive()
+            
+            st.altair_chart(funnel_chart, use_container_width=True)
+            
+            # Show conversion metrics
+            st.caption("💡 **Event-Based Funnel** - Shows progression: Started → Completed → Repeated (attempted again)")
+            
+            # Display detailed metrics
+            for variant_code in ['A', 'B']:
+                variant_funnel = funnel_data[funnel_data['variant'] == variant_code].sort_values('stage_order')
+                if len(variant_funnel) > 0:
+                    variant_label = "Control (3 words)" if variant_code == "A" else "Variant (4 words)"
+                    
+                    started_row = variant_funnel[variant_funnel['stage'] == 'Started']
+                    completed_row = variant_funnel[variant_funnel['stage'] == 'Completed']
+                    repeated_row = variant_funnel[variant_funnel['stage'] == 'Repeated']
+                    
+                    metrics = []
+                    if not started_row.empty:
+                        started_events = started_row.iloc[0]['event_count']
+                        metrics.append(f"Started: {int(started_events)} events")
+                    
+                    if not completed_row.empty:
+                        completed_events = completed_row.iloc[0]['event_count']
+                        if not started_row.empty:
+                            completion_rate = (completed_events / started_events * 100) if started_events > 0 else 0
+                            metrics.append(f"Completed: {int(completed_events)} events ({completion_rate:.1f}%)")
+                        else:
+                            metrics.append(f"Completed: {int(completed_events)} events")
+                    
+                    if not repeated_row.empty:
+                        repeated_events = repeated_row.iloc[0]['event_count']
+                        if not completed_row.empty:
+                            repeat_rate = (repeated_events / completed_events * 100) if completed_events > 0 else 0
+                            metrics.append(f"Repeated: {int(repeated_events)} users repeated ({repeat_rate:.1f}%)")
+                        else:
+                            metrics.append(f"Repeated: {int(repeated_events)} users")
+                    
+                    st.caption(f"**{variant_label}**: {' → '.join(metrics)}")
         else:
             st.info("No funnel data yet")
 
