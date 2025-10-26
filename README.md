@@ -43,7 +43,7 @@ PostHog Events → Supabase (PostgreSQL) → Streamlit Dashboard → Embedded in
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR-USERNAME/soma-streamlit-dashboard.git
+git clone https://github.com/eeshansrivastava89/soma-streamlit-dashboard.git
 cd soma-streamlit-dashboard
 ```
 
@@ -87,7 +87,7 @@ The dashboard queries these Supabase views:
 - `v_conversion_funnel` - Start → Complete → Fail funnel
 - `posthog_events` - Raw event data for time series
 
-See [supabase-schema.sql](https://github.com/YOUR-USERNAME/soma-blog-hugo/blob/main/supabase-schema.sql) for complete schema.
+See [supabase-schema.sql](https://github.com/eeshansrivastava89/soma-blog-hugo/blob/main/supabase-schema.sql) for complete schema.
 
 ## Deployment
 
