@@ -165,7 +165,7 @@ try:
         st.subheader("⏱️ Completion Time Distribution")
 
         if not completions.empty:
-            # Create KDE (Kernel Density Estimation) curves using Altair
+            # Create smooth PDF (Probability Density Function) curves using Altair
             # Filter out any null values
             completions_clean = completions.dropna(subset=['completion_time_seconds'])
             
@@ -175,13 +175,13 @@ try:
                     'completion_time_seconds',
                     as_=['completion_time_seconds', 'density'],
                     groupby=['variant'],
-                    bandwidth=0.5  # Adjust smoothness (lower = more detailed, higher = smoother)
-                ).mark_line(
-                    size=3,
-                    opacity=0.8
+                    bandwidth=0.5
+                ).mark_area(
+                    opacity=0.4,
+                    interpolate='monotone'
                 ).encode(
                     x=alt.X('completion_time_seconds:Q', title='Completion Time (seconds)'),
-                    y=alt.Y('density:Q', title='Probability Density'),
+                    y=alt.Y('density:Q', title='Probability Density', stack=None),
                     color=alt.Color(
                         'variant:N',
                         scale=alt.Scale(
@@ -202,7 +202,7 @@ try:
                 
                 st.altair_chart(kde_chart, use_container_width=True)
                 
-                st.caption("💡 **Hover over the curves** to see exact time and probability values. Smooth curves show how likely each completion time is for each variant.")
+                st.caption("💡 **Probability Density Function (PDF)** - Hover to see exact values. Higher area = more likely completion time.")
             else:
                 st.info("No valid completion time data yet")
         else:
