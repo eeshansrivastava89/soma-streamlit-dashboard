@@ -77,6 +77,11 @@ st.title("📊 A/B Test Dashboard: Word Search Difficulty")
 st.markdown(f"**Last updated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 st.markdown("---")
 
+# Optional: Add a manual refresh button
+if st.button("🔄 Refresh Data", type="secondary"):
+    st.cache_data.clear()
+    st.rerun()
+
 # Load data
 try:
     variant_stats = load_variant_stats()
@@ -372,7 +377,4 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Optional: Add a manual refresh button
-if st.button("🔄 Refresh Data", type="secondary"):
-    st.cache_data.clear()
-    st.rerun()
+
