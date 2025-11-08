@@ -1,0 +1,36 @@
+# Fly.io configuration for Streamlit dashboard
+app = "soma-streamlit-dashboard"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Environment will be set via fly secret set
+  PORT = "8501"
+
+[[services]]
+  internal_port = 8501
+  processes = ["app"]
+  
+  [[services.ports]]
+    port = 443
+    handlers = ["tls"]
+  
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+# Autoscaling
+[deploy]
+  release_command = "echo 'Starting Streamlit dashboard...'"
+
+# Volumes (optional, for caching)
+# [[mounts]]
+#   source = "streamlit_cache"
+#   destination = "/root/.streamlit"

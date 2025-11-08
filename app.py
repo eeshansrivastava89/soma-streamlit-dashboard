@@ -5,6 +5,7 @@ import altair as alt
 from sqlalchemy import create_engine
 from datetime import datetime
 import time
+import os
 
 # Page config
 st.set_page_config(
@@ -29,8 +30,16 @@ st.markdown("""
 # Database connection
 @st.cache_resource
 def get_db_connection():
-    """Create database connection from Streamlit secrets"""
-    connection_string = st.secrets["supabase"]["connection_string"]
+    """Create database connection from environment or Streamlit secrets"""
+    # Try environment variable first (Fly.io), then Streamlit secrets (local dev)
+    connection_string = os.getenv("SUPABASE_CONNECTION_STRING")
+    if not connection_string:
+        try:
+            connection_string = st.secrets["supabase"]["connection_string"]
+        except (KeyError, FileNotFoundError):
+            st.error("❌ Supabase connection string not found in environment or secrets")
+            st.stop()
+    
     engine = create_engine(connection_string)
     return engine
 
